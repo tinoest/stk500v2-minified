@@ -421,7 +421,7 @@ int main(void)
 	if (bootTimer != BOOT_TIMEOUT)
 	{
 		//	main loop
-		while ( ispProgram == true)
+		while ( !ispProgram )
 		{
 			recieveData(msgBuffer);	// Retrieve all the data
 
@@ -452,7 +452,7 @@ int main(void)
 					}
 					break;
 				case CMD_LEAVE_PROGMODE_ISP:
-					ispProgram		=	false;
+					ispProgram		=	1;
 					msgLength			=	2;
 					msgBuffer[1]	=	STATUS_CMD_OK;
 					break;

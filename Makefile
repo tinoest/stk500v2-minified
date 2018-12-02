@@ -207,9 +207,10 @@ mega1280: begin gccversion sizebefore build sizeafter end
 
 ############################################################
 #	Sept 21, 2018	<MGB> Adding 1284P Support	
+# -U lfuse:w:0xF7:m -U hfuse:w:0xD2:m -U efuse:w:0xFD:m
 mega1284p: MCU = atmega1284p
 mega1284p: F_CPU = 16000000
-mega1284p: BOOTLOADER_ADDRESS = 1E000
+mega1284p: BOOTLOADER_ADDRESS = 1F800
 mega1284p: CFLAGS += -D_MEGA_BOARD_
 mega1284p: begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega1284p.hex
