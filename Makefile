@@ -218,9 +218,11 @@ mega1284p: begin gccversion sizebefore build sizeafter end
 
 ############################################################
 #	Jul 6,	2010	<MLS> Adding 2560 support
+# avrdude -v -patmega2560 -cusbtiny -e  -U lock:w:0x3F:m -U lfuse:w:0xff:m -U hfuse:w:0xda:m -U efuse:w:0xfd:m
+# avrdude -v -patmega2560 -cusbtiny -Uflash:w:stk500boot_v2_mega2560.hex:i -Ulock:w:0x0F:m 
 mega2560:	MCU = atmega2560
 mega2560:	F_CPU = 16000000
-mega2560:	BOOTLOADER_ADDRESS = 3F800 #3E000
+mega2560:	BOOTLOADER_ADDRESS = 3F000
 mega2560:	CFLAGS += -D_MEGA_BOARD_
 mega2560:	begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega2560.hex

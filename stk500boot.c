@@ -536,6 +536,59 @@ int main(void)
 						*p++	=	STATUS_CMD_OK;
 					}
 					break;
+				case CMD_SPI_MULTI:
+					{
+						unsigned char answerByte;
+						unsigned char flag=0;
+
+						if ( msgBuffer[4]== 0x30 )
+						{
+							unsigned char signatureIndex	=	msgBuffer[6];
+
+							if ( signatureIndex == 0 )
+							{
+								answerByte	=	(SIGNATURE_BYTES >> 16) & 0x000000FF;
+							}
+							else if ( signatureIndex == 1 )
+							{
+								answerByte	=	(SIGNATURE_BYTES >> 8) & 0x000000FF;
+							}
+							else
+							{
+								answerByte	=	SIGNATURE_BYTES & 0x000000FF;
+							}
+						}
+						else if ( msgBuffer[4] & 0x50 )
+						{
+							if (msgBuffer[4] == 0x50)
+							{
+								answerByte	=	boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
+							}
+							else if (msgBuffer[4] == 0x58)
+							{
+								answerByte	=	boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
+							}
+							else
+							{
+								answerByte	=	0;
+							}
+						}
+						else
+						{
+							answerByte	=	0; // for all others command are not implemented, return dummy value for AVRDUDE happy <Worapoht>
+						}
+						if ( !flag )
+						{
+							msgLength		=	7;
+							msgBuffer[1]	=	STATUS_CMD_OK;
+							msgBuffer[2]	=	0;
+							msgBuffer[3]	=	msgBuffer[4];
+							msgBuffer[4]	=	0;
+							msgBuffer[5]	=	answerByte;
+							msgBuffer[6]	=	STATUS_CMD_OK;
+						}
+					}
+					break;
 				default:
 					msgLength			=	2;
 					msgBuffer[1]	=	STATUS_CMD_FAILED;
