@@ -81,6 +81,7 @@ NOTES:
 */
 
 #define BOOTSIZE 2048
+//#define BOOTSIZE 1024
 
 #define APP_END  ( FLASHEND - ( 2 * BOOTSIZE ) + 1 )
 
