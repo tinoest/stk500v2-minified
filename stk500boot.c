@@ -385,9 +385,7 @@ int main(void)
 	uint32_t address				=	0;
 	uint32_t eraseAddress		=	0;
 	uint32_t bootTimer			= 0;
-
-	uint8_t	mcuStatusReg;
-	mcuStatusReg	=	MCUSR;
+	uint8_t resetSource			=	MCUSR;
 
 	__asm__ __volatile__ ("cli");
 	__asm__ __volatile__ ("wdr");
@@ -395,8 +393,12 @@ int main(void)
 	WDTCSR	|=	( 1 << WDCE ) | ( 1 << WDE );
 	WDTCSR	=	0;
 	__asm__ __volatile__ ("sei");
+
+	// move the resetSource to variable r2 so we can access it in the application if we want to
+	__asm__ __volatile__ ("mov r2, %0\n" :: "r" (resetSource));
+
 	// check if WDT generated the reset, if so, go straight to app
-	if ( mcuStatusReg & ( 1 << WDRF ) )
+	if ( resetSource & ( 1 << WDRF ) )
 	{
 		appStart();
 	}
@@ -537,6 +539,7 @@ int main(void)
 						*p++	=	STATUS_CMD_OK;
 					}
 					break;
+#ifdef SPI_MULTI_SUPPORT
 				case CMD_SPI_MULTI:
 					{
 						unsigned char answerByte;
@@ -590,6 +593,7 @@ int main(void)
 						}
 					}
 					break;
+#endif
 				default:
 					msgLength			=	2;
 					msgBuffer[1]	=	STATUS_CMD_FAILED;
