@@ -27,6 +27,9 @@ NOTES:
 #include	<avr/pgmspace.h>
 #include	"command.h"
 
+
+//#define SPI_MULTI_SUPPORT 1
+
 #ifndef EEWE
 	#define EEWE    1
 #endif
