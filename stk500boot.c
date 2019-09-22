@@ -27,7 +27,6 @@ NOTES:
 #include	<avr/pgmspace.h>
 #include	"command.h"
 
-
 //#define SPI_MULTI_SUPPORT 1
 
 #ifndef EEWE
@@ -73,8 +72,10 @@ NOTES:
 /*
  * Calculate the address where the bootloader starts from FLASHEND and BOOTSIZE
  * (adjust BOOTSIZE below and BOOTLOADER_ADDRESS in Makefile if you want to change the size of the bootloader)
+ * BOOTLOADER_ADDRESS (ATMega2560)	= 256 * 1024 = 262144, 2Kb bootloader, 262144 - 2048 = 260096 ( 0x3F800 )
+ * BOOTLOADER_ADDRESS (ATMega1280)	= 256 * 1024 = 262144, 2Kb bootloader, 131072 - 2048 = 129024 ( 0x1F800 )
+ * BOOTLOADER_ADDRESS (ATMega1284p) = 128 * 1024 = 131072, 2Kb bootloader, 131072 - 2048 = 129024 ( 0x1F800 )
  */
-//#define BOOTSIZE 1024
 /*
 #if FLASHEND > 0x0F000
 	#define BOOTSIZE 8192
@@ -84,7 +85,6 @@ NOTES:
 */
 
 #define BOOTSIZE 2048
-//#define BOOTSIZE 1024
 
 #define APP_END  ( FLASHEND - ( 2 * BOOTSIZE ) + 1 )
 
@@ -204,7 +204,7 @@ static void programDevice(uint32_t* programAddress, uint32_t* eraseAddress, uint
 		boot_page_fill(*programAddress,	word);
 
 		*programAddress	+= 2;
-		msgSize					-=	2;
+		msgSize					-= 2;
 	} while (msgSize);
 
 	boot_page_write(tempAddress);
@@ -256,8 +256,7 @@ uint8_t getParameter(uint8_t cmd)
 {
 	uint8_t value;
 
-	switch(cmd)
-	{
+	switch(cmd) {
 		case PARAM_BUILD_NUMBER_LOW:
 			value	=	CONFIG_PARAM_BUILD_NUMBER_LOW;
 			break;
@@ -289,14 +288,11 @@ void recieveData(uint8_t* msgBuffer)
 
 	uint8_t	msgParseState;
 	msgParseState	=	ST_START;
-	while ( msgParseState != ST_PROCESS )
-	{
+	while ( msgParseState != ST_PROCESS ) {
 		uint8_t c	=	recieveChar();
-		switch (msgParseState)
-		{
+		switch (msgParseState) {
 			case ST_START:
-				if ( c == MESSAGE_START )
-				{
+				if ( c == MESSAGE_START ) {
 					msgParseState	=	ST_GET_SEQ_NUM;
 					checksum			=	MESSAGE_START ^ 0;
 				}
@@ -321,14 +317,12 @@ void recieveData(uint8_t* msgBuffer)
 				break;
 
 			case ST_GET_TOKEN:
-				if ( c == TOKEN )
-				{
+				if ( c == TOKEN ) {
 					msgParseState	=	ST_GET_DATA;
 					checksum			^=	c;
 					i							=	0;
 				}
-				else
-				{
+				else {
 					msgParseState	=	ST_START;
 				}
 				break;
@@ -336,19 +330,16 @@ void recieveData(uint8_t* msgBuffer)
 			case ST_GET_DATA:
 				msgBuffer[i++]	=	c;
 				checksum		^=	c;
-				if (i == msgLength )
-				{
+				if (i == msgLength ) {
 					msgParseState	=	ST_GET_CHECK;
 				}
 				break;
 
 			case ST_GET_CHECK:
-				if ( c == checksum )
-				{
+				if ( c == checksum ) {
 					msgParseState	=	ST_PROCESS;
 				}
-				else
-				{
+				else {
 					msgParseState	=	ST_START;
 				}
 				break;
@@ -366,14 +357,14 @@ void appStart( void )
 	data	=	pgm_read_word_near(0);	//	get the first word of the user program
 #endif
 
-	if (data != 0xFFFF)							//	make sure its valid before jumping to it.
-	{
+	if (data != 0xFFFF)	{						//	make sure its valid before jumping to it.
 		asm volatile(
 			"clr	r30		\n\t"
 			"clr	r31		\n\t"
 			"ijmp	\n\t"
 		);
 	}
+
 }
 
 //*****************************************************************************
@@ -401,8 +392,7 @@ int main(void)
 	__asm__ __volatile__ ("mov r2, %0\n" :: "r" (resetSource));
 
 	// check if WDT generated the reset, if so, go straight to app
-	if ( resetSource & ( 1 << WDRF ) )
-	{
+	if ( resetSource & ( 1 << WDRF ) ) {
 		appStart();
 	}
 
@@ -419,23 +409,19 @@ int main(void)
 	asm volatile ("nop");			// wait until port has changed
 
 	// wait for data
-	while ( (!( serialAvailable() )) && ( ++bootTimer != BOOT_TIMEOUT ) )
-	{
+	while ( (!( serialAvailable() )) && ( ++bootTimer != BOOT_TIMEOUT ) ) {
 		asm volatile ("nop");
 	}
 
-	if (bootTimer != BOOT_TIMEOUT)
-	{
+	if (bootTimer != BOOT_TIMEOUT) {
 		//	main loop
-		while ( !ispProgram )
-		{
+		while ( !ispProgram ) {
 			recieveData(msgBuffer);	// Retrieve all the data
 
 			// Now process the STK500 commands, see Atmel Appnote AVR068
-			switch (msgBuffer[0])
-			{
+			switch (msgBuffer[0]) {
 				case CMD_SIGN_ON:
-					msgLength		=	11;
+					msgLength			=	11;
 					msgBuffer[1] 	=	STATUS_CMD_OK;
 					msgBuffer[2] 	=	8;
 					msgBuffer[3] 	=	'A';
@@ -472,12 +458,15 @@ int main(void)
 						uint8_t signatureIndex	=	msgBuffer[4];
 						uint8_t signature;
 
-						if ( signatureIndex == 0 )
+						if ( signatureIndex == 0 ) {
 							signature	=	(SIGNATURE_BYTES >> 16) & 0x000000FF;
-						else if ( signatureIndex == 1 )
+						}
+						else if ( signatureIndex == 1 ) {
 							signature	=	(SIGNATURE_BYTES >> 8) & 0x000000FF;
-						else
+						}
+						else {
 							signature	=	SIGNATURE_BYTES & 0x000000FF;
+						}
 
 						msgLength			=	4;
 						msgBuffer[1]	=	STATUS_CMD_OK;
@@ -494,15 +483,15 @@ int main(void)
 				case CMD_READ_FUSE_ISP:
 					{
 						uint8_t fuseBits;
-						if ( msgBuffer[2] == 0x50 )
-						{
-							if ( msgBuffer[3] == 0x08 )
+						if ( msgBuffer[2] == 0x50 ) {
+							if ( msgBuffer[3] == 0x08 ) {
 								fuseBits	=	boot_lock_fuse_bits_get( GET_EXTENDED_FUSE_BITS );
-							else
+							}
+							else {
 								fuseBits	=	boot_lock_fuse_bits_get( GET_LOW_FUSE_BITS );
+							}
 						}
-						else
-						{
+						else {
 							fuseBits	=	boot_lock_fuse_bits_get( GET_HIGH_FUSE_BITS );
 						}
 						msgLength			=	4;
@@ -548,45 +537,35 @@ int main(void)
 						unsigned char answerByte;
 						unsigned char flag=0;
 
-						if ( msgBuffer[4]== 0x30 )
-						{
+						if ( msgBuffer[4]== 0x30 ) {
 							unsigned char signatureIndex	=	msgBuffer[6];
 
-							if ( signatureIndex == 0 )
-							{
+							if ( signatureIndex == 0 ) {
 								answerByte	=	(SIGNATURE_BYTES >> 16) & 0x000000FF;
 							}
-							else if ( signatureIndex == 1 )
-							{
+							else if ( signatureIndex == 1 ) {
 								answerByte	=	(SIGNATURE_BYTES >> 8) & 0x000000FF;
 							}
-							else
-							{
+							else {
 								answerByte	=	SIGNATURE_BYTES & 0x000000FF;
 							}
 						}
-						else if ( msgBuffer[4] & 0x50 )
-						{
-							if (msgBuffer[4] == 0x50)
-							{
+						else if ( msgBuffer[4] & 0x50 ) {
+							if (msgBuffer[4] == 0x50) {
 								answerByte	=	boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
 							}
-							else if (msgBuffer[4] == 0x58)
-							{
+							else if (msgBuffer[4] == 0x58) {
 								answerByte	=	boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
 							}
-							else
-							{
+							else {
 								answerByte	=	0;
 							}
 						}
-						else
-						{
+						else {
 							answerByte	=	0; // for all others command are not implemented, return dummy value for AVRDUDE happy <Worapoht>
 						}
-						if ( !flag )
-						{
-							msgLength		=	7;
+						if ( !flag ) {
+							msgLength			=	7;
 							msgBuffer[1]	=	STATUS_CMD_OK;
 							msgBuffer[2]	=	0;
 							msgBuffer[3]	=	msgBuffer[4];
@@ -597,6 +576,7 @@ int main(void)
 					}
 					break;
 #endif
+
 				default:
 					msgLength			=	2;
 					msgBuffer[1]	=	STATUS_CMD_FAILED;
@@ -622,8 +602,7 @@ int main(void)
 			checksum ^= TOKEN;
 
 			p	=	msgBuffer;
-			while ( msgLength )
-			{
+			while ( msgLength ) {
 				c	=	*p++;
 				transmitChar(c);
 				checksum ^= c;

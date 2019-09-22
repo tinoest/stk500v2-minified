@@ -25,14 +25,6 @@
 #     automatically to create a 32-bit value in your source code.
 #F_CPU = 16000000
 
-# Bootloader
-# Please adjust if using a different AVR
-# 0x0e00*2=0x1C00 for ATmega8  512 words Boot Size
-# 0xFC00*2=0x1F800 for ATmega128  1024 words Boot Size
-# 0xF800*2=0x1F000 for ATmega1280
-# 0xF000*2=0x1E000 for ATmega1280
-#BOOTLOADER_ADDRESS = 1E000
-
 # Output format. (can be srec, ihex, binary)
 FORMAT = ihex
 
@@ -187,7 +179,6 @@ OBJ = $(SRC:.c=.o) $(ASRC:.S=.o)
 # Define all listing files.
 LST = $(SRC:.c=.lst) $(ASRC:.S=.lst)
 
-
 # Compiler flags to generate dependency files.
 GENDEPFLAGS = -MD -MP -MF .dep/$(@F).d
 
@@ -200,7 +191,7 @@ ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 #	May 25,	2010	<MLS> Adding 1280 support
 mega1280: MCU = atmega1280
 mega1280: F_CPU = 16000000
-mega1280: BOOTLOADER_ADDRESS = 1E000
+mega1280: BOOTLOADER_ADDRESS = 1F800
 mega1280: CFLAGS += -D_MEGA_BOARD_
 mega1280: begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega1280.hex
