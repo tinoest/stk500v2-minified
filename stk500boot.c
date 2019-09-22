@@ -74,7 +74,7 @@ NOTES:
  * (adjust BOOTSIZE below and BOOTLOADER_ADDRESS in Makefile if you want to change the size of the bootloader)
  * BOOTLOADER_ADDRESS (ATMega2560)	= 256 * 1024 = 262144, 2Kb bootloader, 262144 - 2048 = 260096 ( 0x3F800 )
  * BOOTLOADER_ADDRESS (ATMega1280)	= 256 * 1024 = 262144, 2Kb bootloader, 131072 - 2048 = 129024 ( 0x1F800 )
- * BOOTLOADER_ADDRESS (ATMega1284p) = 128 * 1024 = 131072, 2Kb bootloader, 131072 - 2048 = 129024 ( 0x1F800 )
+ * BOOTLOADER_ADDRESS (ATMega1284p)	= 128 * 1024 = 131072, 2Kb bootloader, 131072 - 2048 = 129024 ( 0x1F800 )
  */
 /*
 #if FLASHEND > 0x0F000
@@ -576,7 +576,6 @@ int main(void)
 					}
 					break;
 #endif
-
 				default:
 					msgLength			=	2;
 					msgBuffer[1]	=	STATUS_CMD_FAILED;
