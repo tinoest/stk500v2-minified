@@ -27,7 +27,7 @@ NOTES:
 #include	<avr/pgmspace.h>
 #include	"command.h"
 
-//#define SPI_MULTI_SUPPORT 1
+#define SPI_MULTI_SUPPORT 1
 
 #ifndef EEWE
 	#define EEWE    1
@@ -76,13 +76,6 @@ NOTES:
  * BOOTLOADER_ADDRESS (ATMega1280)	= 256 * 1024 = 262144, 2Kb bootloader, 131072 - 2048 = 129024 ( 0x1F800 )
  * BOOTLOADER_ADDRESS (ATMega1284p)	= 128 * 1024 = 131072, 2Kb bootloader, 131072 - 2048 = 129024 ( 0x1F800 )
  */
-/*
-#if FLASHEND > 0x0F000
-	#define BOOTSIZE 8192
-#else
-	#define BOOTSIZE 2048
-#endif
-*/
 
 #define BOOTSIZE 2048
 
@@ -97,12 +90,24 @@ NOTES:
 	#define SIGNATURE_BYTES 0x1E9801
 #elif defined (__AVR_ATmega1284P__)
 	#define SIGNATURE_BYTES 0x1E9705
+#elif defined (__AVR_ATmega328PB__)
+	#define SIGNATURE_BYTES 0x1E9705
 #else
 	#error "no signature definition for MCU available"
 #endif
 
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega2560__)
 	/* ATMega with two USART, use UART0 */
+	#define	UART_BAUD_RATE_LOW			UBRR0L
+	#define	UART_STATUS_REG					UCSR0A
+	#define	UART_CONTROL_REG				UCSR0B
+	#define	UART_ENABLE_TRANSMITTER	TXEN0
+	#define	UART_ENABLE_RECEIVER		RXEN0
+	#define	UART_TRANSMIT_COMPLETE	TXC0
+	#define	UART_RECEIVE_COMPLETE		RXC0
+	#define	UART_DATA_REG						UDR0
+	#define	UART_DOUBLE_SPEED				U2X0
+#elif defined(__AVR_ATmega328PB__) 
 	#define	UART_BAUD_RATE_LOW			UBRR0L
 	#define	UART_STATUS_REG					UCSR0A
 	#define	UART_CONTROL_REG				UCSR0B
@@ -186,7 +191,6 @@ static void readDevice(uint32_t* programAddress, uint16_t msgSize, uint8_t* p)
 	while (msgSize);
 }
 
-
 static void programDevice(uint32_t* programAddress, uint32_t* eraseAddress, uint16_t msgSize, uint8_t* buffer)
 {
 	uint32_t tempAddress	=	*programAddress;
@@ -240,7 +244,7 @@ static uint8_t recieveChar(void)
 /*
  * transmit single byte to USART, wait until transmission is completed
  */
-static void transmitChar(char c)
+static void transmitChar(int8_t c)
 {
 	
 	UART_DATA_REG	=	c;
@@ -443,16 +447,19 @@ int main(void)
 						msgBuffer[2]	=	value;
 					}
 					break;
+
 				case CMD_LEAVE_PROGMODE_ISP:
 					ispProgram		=	1;
 					msgLength			=	2;
 					msgBuffer[1]	=	STATUS_CMD_OK;
 					break;
+
 				case CMD_SET_PARAMETER:
 				case CMD_ENTER_PROGMODE_ISP:
 					msgLength			=	2;
 					msgBuffer[1]	=	STATUS_CMD_OK;
 					break;
+
 				case CMD_READ_SIGNATURE_ISP:
 					{
 						uint8_t signatureIndex	=	msgBuffer[4];
@@ -474,12 +481,14 @@ int main(void)
 						msgBuffer[3]	=	STATUS_CMD_OK;
 					}
 					break;
+
 				case CMD_READ_LOCK_ISP:
 					msgLength			=	4;
 					msgBuffer[1]	=	STATUS_CMD_OK;
 					msgBuffer[2]	=	boot_lock_fuse_bits_get( GET_LOCK_BITS );
 					msgBuffer[3]	=	STATUS_CMD_OK;
 					break;
+
 				case CMD_READ_FUSE_ISP:
 					{
 						uint8_t fuseBits;
@@ -500,11 +509,13 @@ int main(void)
 						msgBuffer[3]	=	STATUS_CMD_OK;
 					}
 					break;
+
 				case CMD_CHIP_ERASE_ISP:
 					eraseAddress		=	0;
 					msgLength				=	2;
 					msgBuffer[1]		=	STATUS_CMD_FAILED;
 					break;
+
 				case CMD_LOAD_ADDRESS:
 	#if defined(RAMPZ)
 					address	=	( ((uint32_t)(msgBuffer[1]) << 24 ) | ((uint32_t)(msgBuffer[2]) << 16 ) | ((uint32_t)(msgBuffer[3]) << 8 )|(msgBuffer[4]) ) << 1; // convert word to byte address
@@ -514,6 +525,7 @@ int main(void)
 					msgLength			=	2;
 					msgBuffer[1]	=	STATUS_CMD_OK;
 					break;
+
 				case CMD_PROGRAM_FLASH_ISP:
 					{
 						uint16_t size	=	((msgBuffer[1]) << 8) | msgBuffer[2];
@@ -522,6 +534,7 @@ int main(void)
 						msgBuffer[1]	=	STATUS_CMD_OK;
 					}
 					break;
+
 				case CMD_READ_FLASH_ISP:
 					{
 						uint16_t	size	=	((msgBuffer[1])<<8) | msgBuffer[2];
@@ -531,14 +544,15 @@ int main(void)
 						*p++	=	STATUS_CMD_OK;
 					}
 					break;
+
 #ifdef SPI_MULTI_SUPPORT
 				case CMD_SPI_MULTI:
 					{
-						unsigned char answerByte;
-						unsigned char flag=0;
+						uint8_t answerByte;
+						uint8_t flag=0;
 
 						if ( msgBuffer[4]== 0x30 ) {
-							unsigned char signatureIndex	=	msgBuffer[6];
+							uint8_t signatureIndex	=	msgBuffer[6];
 
 							if ( signatureIndex == 0 ) {
 								answerByte	=	(SIGNATURE_BYTES >> 16) & 0x000000FF;
@@ -576,6 +590,7 @@ int main(void)
 					}
 					break;
 #endif
+
 				default:
 					msgLength			=	2;
 					msgBuffer[1]	=	STATUS_CMD_FAILED;
