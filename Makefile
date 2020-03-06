@@ -191,7 +191,7 @@ ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 #	Feb 02, 2020	<MGB> Adding 328PB Support	
 mega328pb: MCU = atmega328pb
 mega328pb: F_CPU = 16000000
-mega328pb: BOOTLOADER_ADDRESS = 7C00
+mega328pb: BOOTLOADER_ADDRESS = 7800
 mega328pb: CFLAGS += -D_MEGA_BOARD_
 mega328pb: begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega328pb.hex

@@ -27,7 +27,7 @@ NOTES:
 #include	<avr/pgmspace.h>
 #include	"command.h"
 
-#define SPI_MULTI_SUPPORT 1
+//#define SPI_MULTI_SUPPORT 1
 
 #ifndef EEWE
 	#define EEWE    1
@@ -91,7 +91,7 @@ NOTES:
 #elif defined (__AVR_ATmega1284P__)
 	#define SIGNATURE_BYTES 0x1E9705
 #elif defined (__AVR_ATmega328PB__)
-	#define SIGNATURE_BYTES 0x1E9705
+	#define SIGNATURE_BYTES 0x1E9516
 #else
 	#error "no signature definition for MCU available"
 #endif
@@ -376,14 +376,14 @@ int main(void)
 
 	uint8_t *p;
 	uint8_t	msgBuffer[285];
-  uint8_t	seqNum					=	0;
+    uint8_t	seqNum				= 0;
 	uint8_t ispProgram			= 0;
-	uint8_t	checksum				=	0;
-	uint16_t msgLength			=	0;
-	uint32_t address				=	0;
-	uint32_t eraseAddress		=	0;
+	uint8_t	checksum			= 0;
+	uint16_t msgLength			= 0;
+	uint32_t address			= 0;
+	uint32_t eraseAddress		= 0;
 	uint32_t bootTimer			= 0;
-	uint8_t resetSource			=	MCUSR;
+	uint8_t resetSource			= MCUSR;
 
 	__asm__ __volatile__ ("cli");
 	__asm__ __volatile__ ("wdr");
@@ -424,6 +424,7 @@ int main(void)
 
 			// Now process the STK500 commands, see Atmel Appnote AVR068
 			switch (msgBuffer[0]) {
+
 				case CMD_SIGN_ON:
 					msgLength			=	11;
 					msgBuffer[1] 	=	STATUS_CMD_OK;
@@ -510,18 +511,12 @@ int main(void)
 					}
 					break;
 
-				case CMD_CHIP_ERASE_ISP:
-					eraseAddress		=	0;
-					msgLength				=	2;
-					msgBuffer[1]		=	STATUS_CMD_FAILED;
-					break;
-
 				case CMD_LOAD_ADDRESS:
-	#if defined(RAMPZ)
+#if defined(RAMPZ)
 					address	=	( ((uint32_t)(msgBuffer[1]) << 24 ) | ((uint32_t)(msgBuffer[2]) << 16 ) | ((uint32_t)(msgBuffer[3]) << 8 )|(msgBuffer[4]) ) << 1; // convert word to byte address
-	#else
+#else
 					address	=	( ((msgBuffer[3]) << 8 ) | (msgBuffer[4]) ) << 1;		// convert word to byte address
-	#endif
+#endif
 					msgLength			=	2;
 					msgBuffer[1]	=	STATUS_CMD_OK;
 					break;
@@ -590,7 +585,9 @@ int main(void)
 					}
 					break;
 #endif
-
+				case CMD_CHIP_ERASE_ISP:
+					eraseAddress		=	0;
+                    // Fallthrough
 				default:
 					msgLength			=	2;
 					msgBuffer[1]	=	STATUS_CMD_FAILED;
