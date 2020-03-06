@@ -138,7 +138,6 @@ NOTES:
 #define	ST_GET_CHECK		6
 #define	ST_PROCESS			7
 
-uint8_t	seqNum					=	0;
 
 /*
  * since this bootloader is not linked against the avr-gcc crt1 functions,
@@ -280,7 +279,7 @@ uint8_t getParameter(uint8_t cmd)
 	return value;
 }
 
-void recieveData(uint8_t* msgBuffer)
+void recieveData(uint8_t* seqNum, uint8_t* msgBuffer)
 {
 	uint8_t	checksum				=	0;
 	uint16_t i							=	0;
@@ -299,7 +298,7 @@ void recieveData(uint8_t* msgBuffer)
 				break;
 
 			case ST_GET_SEQ_NUM:
-				seqNum				=	c;
+				*seqNum				=	c;
 				msgParseState	=	ST_MSG_SIZE_1;
 				checksum			^=	c;
 				break;
@@ -373,6 +372,7 @@ int main(void)
 
 	uint8_t *p;
 	uint8_t	msgBuffer[285];
+  uint8_t	seqNum					=	0;
 	uint8_t ispProgram			= 0;
 	uint8_t	checksum				=	0;
 	uint16_t msgLength			=	0;
@@ -416,7 +416,7 @@ int main(void)
 	if (bootTimer != BOOT_TIMEOUT) {
 		//	main loop
 		while ( !ispProgram ) {
-			recieveData(msgBuffer);	// Retrieve all the data
+			recieveData(&seqNum, msgBuffer);	// Retrieve all the data
 
 			// Now process the STK500 commands, see Atmel Appnote AVR068
 			switch (msgBuffer[0]) {
