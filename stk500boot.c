@@ -27,7 +27,11 @@ NOTES:
 #include	<avr/pgmspace.h>
 #include	"command.h"
 
-//#define SPI_MULTI_SUPPORT 1
+//#define REMOVE_SPI_MULTI_SUPPORT                              // disable spi multi support 
+//#define REMOVE_PROGRAM_LOCK_BIT_SUPPORT                       // disable program lock bits
+//#define REMOVE_READ_FUSE_BIT_SUPPORT													// disable reading lock and fuse bits
+//#define REMOVE_WATCHDOG_SUPPORT																// disable the clearing of the wdt bits
+
 
 #ifndef EEWE
 	#define EEWE    1
@@ -376,14 +380,16 @@ int main(void)
 
 	uint8_t *p;
 	uint8_t	msgBuffer[285];
-    uint8_t	seqNum				= 0;
-	uint8_t ispProgram			= 0;
+  uint8_t	seqNum				= 0;
+	uint8_t ispProgram		= 0;
 	uint8_t	checksum			= 0;
-	uint16_t msgLength			= 0;
+	uint16_t msgLength		= 0;
 	uint32_t address			= 0;
-	uint32_t eraseAddress		= 0;
-	uint32_t bootTimer			= 0;
-	uint8_t resetSource			= MCUSR;
+	uint32_t eraseAddress	= 0;
+	uint32_t bootTimer		= 0;
+	uint8_t resetSource		= MCUSR;
+
+#ifndef REMOVE_WATCHDOG_SUPPORT 
 
 	__asm__ __volatile__ ("cli");
 	__asm__ __volatile__ ("wdr");
@@ -394,6 +400,12 @@ int main(void)
 
 	// move the resetSource to variable r2 so we can access it in the application if we want to
 	__asm__ __volatile__ ("mov r2, %0\n" :: "r" (resetSource));
+
+#else
+
+	MCUSR		=	0;
+
+#endif
 
 	// check if WDT generated the reset, if so, go straight to app
 	if ( resetSource & ( 1 << WDRF ) ) {
@@ -483,12 +495,18 @@ int main(void)
 					}
 					break;
 
+#ifndef REMOVE_PROGRAM_LOCK_BIT_SUPPORT
+
 				case CMD_READ_LOCK_ISP:
 					msgLength			=	4;
 					msgBuffer[1]	=	STATUS_CMD_OK;
 					msgBuffer[2]	=	boot_lock_fuse_bits_get( GET_LOCK_BITS );
 					msgBuffer[3]	=	STATUS_CMD_OK;
 					break;
+
+#endif
+
+#ifndef REMOVE_READ_FUSE_BIT_SUPPORT
 
 				case CMD_READ_FUSE_ISP:
 					{
@@ -510,6 +528,8 @@ int main(void)
 						msgBuffer[3]	=	STATUS_CMD_OK;
 					}
 					break;
+
+#endif
 
 				case CMD_LOAD_ADDRESS:
 #if defined(RAMPZ)
@@ -540,7 +560,7 @@ int main(void)
 					}
 					break;
 
-#ifdef SPI_MULTI_SUPPORT
+#ifndef REMOVE_SPI_MULTI_SUPPORT
 				case CMD_SPI_MULTI:
 					{
 						uint8_t answerByte;
