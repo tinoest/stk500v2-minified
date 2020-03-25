@@ -272,18 +272,24 @@ uint8_t getParameter(uint8_t cmd)
 	uint8_t value;
 
     // If / else if / else is actually less code space than a switch
-    if(cmd == PARAM_BUILD_NUMBER_LOW)
+    if(cmd == PARAM_BUILD_NUMBER_LOW) {
         value	= CONFIG_PARAM_BUILD_NUMBER_LOW;
-    else if(cmd == PARAM_BUILD_NUMBER_HIGH)
+    }
+		else if(cmd == PARAM_BUILD_NUMBER_HIGH) {
         value	= CONFIG_PARAM_BUILD_NUMBER_HIGH;
-    else if(cmd == PARAM_HW_VER)
+    }
+		else if(cmd == PARAM_HW_VER) {
         value	= CONFIG_PARAM_HW_VER;
-    else if(cmd == PARAM_SW_MAJOR)
+    }
+		else if(cmd == PARAM_SW_MAJOR) {
         value	= CONFIG_PARAM_SW_MAJOR;
-    else if(cmd == PARAM_SW_MINOR)
+    }
+		else if(cmd == PARAM_SW_MINOR) {
         value	= CONFIG_PARAM_SW_MINOR;
-    else
+    }
+		else {
         value	= 0;
+		}
 
 	return value;
 }
