@@ -190,6 +190,7 @@ ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 
 ############################################################
 #	Feb 02, 2020	<MGB> Adding 328PB Support	
+// -U lfuse:w:0xFF:m -u hfuse:w:0xD0:m -U efuse:0xF5:m
 mega328pb: MCU = atmega328pb
 mega328pb: F_CPU = 16000000
 mega328pb: BOOTLOADER_ADDRESS = 7800
