@@ -134,8 +134,8 @@ NOTES:
 /*
  * States used in the receive state machine
  */
-#define	ST_START				0
-#define	ST_GET_SEQ_NUM	1
+#define	ST_START			0
+#define	ST_GET_SEQ_NUM	    1
 #define ST_MSG_SIZE_1		2
 #define ST_MSG_SIZE_2		3
 #define ST_GET_TOKEN		4
@@ -259,95 +259,87 @@ uint8_t getParameter(uint8_t cmd)
 {
 	uint8_t value;
 
-	switch(cmd) {
-		case PARAM_BUILD_NUMBER_LOW:
-			value	=	CONFIG_PARAM_BUILD_NUMBER_LOW;
-			break;
-		case PARAM_BUILD_NUMBER_HIGH:
-			value	=	CONFIG_PARAM_BUILD_NUMBER_HIGH;
-			break;
-		case PARAM_HW_VER:
-			value	=	CONFIG_PARAM_HW_VER;
-			break;
-		case PARAM_SW_MAJOR:
-			value	=	CONFIG_PARAM_SW_MAJOR;
-			break;
-		case PARAM_SW_MINOR:
-			value	=	CONFIG_PARAM_SW_MINOR;
-			break;
-		default:
-			value	=	0;
-			break;
-	}
+    // If / else if / else is actually less code space than a switch
+    if(cmd == PARAM_BUILD_NUMBER_LOW)
+        value	= CONFIG_PARAM_BUILD_NUMBER_LOW;
+    else if(cmd == PARAM_BUILD_NUMBER_HIGH)
+        value	= CONFIG_PARAM_BUILD_NUMBER_HIGH;
+    else if(cmd == PARAM_HW_VER)
+        value	= CONFIG_PARAM_HW_VER;
+    else if(cmd == PARAM_SW_MAJOR)
+        value	= CONFIG_PARAM_SW_MAJOR;
+    else if(cmd == PARAM_SW_MINOR)
+        value	= CONFIG_PARAM_SW_MINOR;
+    else
+        value	= 0;
 
 	return value;
 }
 
 void recieveData(uint8_t* seqNum, uint8_t* msgBuffer)
 {
-	uint8_t	checksum				=	0;
-	uint16_t i							=	0;
-	uint16_t msgLength			=	0;
+    uint8_t	checksum			= 0;
+    uint16_t i					= 0;
+    uint16_t msgLength			= 0;
 
 	uint8_t	msgParseState;
 	msgParseState	=	ST_START;
 	while ( msgParseState != ST_PROCESS ) {
 		uint8_t c	=	recieveChar();
-		switch (msgParseState) {
-			case ST_START:
-				if ( c == MESSAGE_START ) {
-					msgParseState	=	ST_GET_SEQ_NUM;
-					checksum			=	MESSAGE_START ^ 0;
-				}
-				break;
+        switch (msgParseState) {
+            case ST_START:
+                if ( c == MESSAGE_START ) {
+                    msgParseState   = ST_GET_SEQ_NUM;
+                    checksum        = MESSAGE_START ^ 0;
+                }
+                break;
+            case ST_GET_SEQ_NUM:
+                *seqNum         = c;
+                msgParseState   = ST_MSG_SIZE_1;
+                checksum        ^= c;
+                break;
 
-			case ST_GET_SEQ_NUM:
-				*seqNum				=	c;
-				msgParseState	=	ST_MSG_SIZE_1;
-				checksum			^=	c;
-				break;
+            case ST_MSG_SIZE_1:
+                msgLength       = c << 8;
+                msgParseState   = ST_MSG_SIZE_2;
+                checksum        ^= c;
+                break;
 
-			case ST_MSG_SIZE_1:
-				msgLength			=	c << 8;
-				msgParseState	=	ST_MSG_SIZE_2;
-				checksum			^=	c;
-				break;
+            case ST_MSG_SIZE_2:
+                msgLength       |= c;
+                msgParseState   = ST_GET_TOKEN;
+                checksum        ^= c;
+                break;
 
-			case ST_MSG_SIZE_2:
-				msgLength		|=	c;
-				msgParseState	=	ST_GET_TOKEN;
-				checksum		^=	c;
-				break;
+            case ST_GET_TOKEN:
+                if ( c == TOKEN ) {
+                    msgParseState   = ST_GET_DATA;
+                    checksum        ^= c;
+                    i               = 0;
+                }
+                else {
+                    msgParseState   = ST_START;
+                }
+                break;
 
-			case ST_GET_TOKEN:
-				if ( c == TOKEN ) {
-					msgParseState	=	ST_GET_DATA;
-					checksum			^=	c;
-					i							=	0;
-				}
-				else {
-					msgParseState	=	ST_START;
-				}
-				break;
+            case ST_GET_DATA:
+                msgBuffer[i++]      = c;
+                checksum            ^= c;
+                if (i == msgLength ) {
+                    msgParseState   = ST_GET_CHECK;
+                }
+                break;
 
-			case ST_GET_DATA:
-				msgBuffer[i++]	=	c;
-				checksum		^=	c;
-				if (i == msgLength ) {
-					msgParseState	=	ST_GET_CHECK;
-				}
-				break;
-
-			case ST_GET_CHECK:
-				if ( c == checksum ) {
-					msgParseState	=	ST_PROCESS;
-				}
-				else {
-					msgParseState	=	ST_START;
-				}
-				break;
-			}	//	switch
-		}	//	while(msgParseState)
+            case ST_GET_CHECK:
+                if ( c == checksum ) {
+                    msgParseState   = ST_PROCESS;
+                }
+                else {
+                    msgParseState   = ST_START;
+                }
+                break;
+        }       //      switch
+    }       //      while(msgParseState)
 }
 
 void appStart( void )
@@ -422,177 +414,148 @@ int main(void)
 		while ( !ispProgram ) {
 			recieveData(&seqNum, msgBuffer);	// Retrieve all the data
 
-			// Now process the STK500 commands, see Atmel Appnote AVR068
-			switch (msgBuffer[0]) {
-
-				case CMD_SIGN_ON:
-					msgLength			=	11;
-					msgBuffer[1] 	=	STATUS_CMD_OK;
-					msgBuffer[2] 	=	8;
-					msgBuffer[3] 	=	'A';
-					msgBuffer[4] 	=	'V';
-					msgBuffer[5] 	=	'R';
-					msgBuffer[6] 	=	'I';
-					msgBuffer[7] 	=	'S';
-					msgBuffer[8] 	=	'P';
-					msgBuffer[9] 	=	'_';
-					msgBuffer[10]	=	'2';
-					break;
-
-				case CMD_GET_PARAMETER:
-					{
-						uint8_t value;
-						value 				= getParameter(msgBuffer[1]);
-						msgLength			=	3;
-						msgBuffer[1]	=	STATUS_CMD_OK;
-						msgBuffer[2]	=	value;
-					}
-					break;
-
-				case CMD_LEAVE_PROGMODE_ISP:
-					ispProgram		=	1;
-					msgLength			=	2;
-					msgBuffer[1]	=	STATUS_CMD_OK;
-					break;
-
-				case CMD_SET_PARAMETER:
-				case CMD_ENTER_PROGMODE_ISP:
-					msgLength			=	2;
-					msgBuffer[1]	=	STATUS_CMD_OK;
-					break;
-
-				case CMD_READ_SIGNATURE_ISP:
-					{
-						uint8_t signatureIndex	=	msgBuffer[4];
-						uint8_t signature;
-
-						if ( signatureIndex == 0 ) {
-							signature	=	(SIGNATURE_BYTES >> 16) & 0x000000FF;
-						}
-						else if ( signatureIndex == 1 ) {
-							signature	=	(SIGNATURE_BYTES >> 8) & 0x000000FF;
-						}
-						else {
-							signature	=	SIGNATURE_BYTES & 0x000000FF;
-						}
-
-						msgLength			=	4;
-						msgBuffer[1]	=	STATUS_CMD_OK;
-						msgBuffer[2]	=	signature;
-						msgBuffer[3]	=	STATUS_CMD_OK;
-					}
-					break;
-
-				case CMD_READ_LOCK_ISP:
-					msgLength			=	4;
-					msgBuffer[1]	=	STATUS_CMD_OK;
-					msgBuffer[2]	=	boot_lock_fuse_bits_get( GET_LOCK_BITS );
-					msgBuffer[3]	=	STATUS_CMD_OK;
-					break;
-
-				case CMD_READ_FUSE_ISP:
-					{
-						uint8_t fuseBits;
-						if ( msgBuffer[2] == 0x50 ) {
-							if ( msgBuffer[3] == 0x08 ) {
-								fuseBits	=	boot_lock_fuse_bits_get( GET_EXTENDED_FUSE_BITS );
-							}
-							else {
-								fuseBits	=	boot_lock_fuse_bits_get( GET_LOW_FUSE_BITS );
-							}
-						}
-						else {
-							fuseBits	=	boot_lock_fuse_bits_get( GET_HIGH_FUSE_BITS );
-						}
-						msgLength			=	4;
-						msgBuffer[1]	=	STATUS_CMD_OK;
-						msgBuffer[2]	=	fuseBits;
-						msgBuffer[3]	=	STATUS_CMD_OK;
-					}
-					break;
-
-				case CMD_LOAD_ADDRESS:
+            // Now process the STK500 commands, see Atmel Appnote AVR068
+            if(msgBuffer[0] == CMD_SIGN_ON) {
+                msgLength		= 11;
+                msgBuffer[1] 	= STATUS_CMD_OK;
+                msgBuffer[2] 	= 8;
+                msgBuffer[3] 	= 'A';
+                msgBuffer[4] 	= 'V';
+                msgBuffer[5] 	= 'R';
+                msgBuffer[6] 	= 'I';
+                msgBuffer[7] 	= 'S';
+                msgBuffer[8] 	= 'P';
+                msgBuffer[9] 	= '_';
+                msgBuffer[10]	= '2';
+            }
+            else if(msgBuffer[0] == CMD_GET_PARAMETER) {
+                uint8_t value;
+                value 			= getParameter(msgBuffer[1]);
+                msgLength		= 3;
+                msgBuffer[1]	= STATUS_CMD_OK;
+                msgBuffer[2]	= value;
+            }
+            else if( ( msgBuffer[0] == CMD_LEAVE_PROGMODE_ISP ) || ( msgBuffer[0] == CMD_SET_PARAMETER ) || ( msgBuffer[0] == CMD_ENTER_PROGMODE_ISP ) ) {
+                if(msgBuffer[0] == CMD_LEAVE_PROGMODE_ISP) {
+                    ispProgram	= 1;
+                }
+                msgLength		= 2;
+                msgBuffer[1]	= STATUS_CMD_OK;
+            }
+            else if(msgBuffer[0] == CMD_READ_SIGNATURE_ISP) {
+                msgLength		= 4;
+                msgBuffer[1]	= STATUS_CMD_OK;
+                if ( msgBuffer[4] == 0 ) {
+                    msgBuffer[2]    = (SIGNATURE_BYTES >> 16) & 0x000000FF;
+                }
+                else if ( msgBuffer[4] == 1 ) {
+                    msgBuffer[2]    = (SIGNATURE_BYTES >> 8) & 0x000000FF;
+                }
+                else {
+                    msgBuffer[2]    = SIGNATURE_BYTES & 0x000000FF;
+                }
+                msgBuffer[3]	=	STATUS_CMD_OK;
+            }
+            else if(msgBuffer[0] == CMD_READ_LOCK_ISP) {
+                msgLength		= 4;
+                msgBuffer[1]	= STATUS_CMD_OK;
+                msgBuffer[2]	= boot_lock_fuse_bits_get( GET_LOCK_BITS );
+                msgBuffer[3]	= STATUS_CMD_OK;
+            }
+            else if(msgBuffer[0] == CMD_READ_FUSE_ISP) {
+                uint8_t fuseBits;
+                if ( msgBuffer[2] == 0x50 ) {
+                    if ( msgBuffer[3] == 0x08 ) {
+                        fuseBits	=	boot_lock_fuse_bits_get( GET_EXTENDED_FUSE_BITS );
+                    }
+                    else {
+                        fuseBits	=	boot_lock_fuse_bits_get( GET_LOW_FUSE_BITS );
+                    }
+                }
+                else {
+                    fuseBits	=	boot_lock_fuse_bits_get( GET_HIGH_FUSE_BITS );
+                }
+                msgLength			=	4;
+                msgBuffer[1]	=	STATUS_CMD_OK;
+                msgBuffer[2]	=	fuseBits;
+                msgBuffer[3]	=	STATUS_CMD_OK;
+            }
+            else if(msgBuffer[0] == CMD_LOAD_ADDRESS) {
 #if defined(RAMPZ)
-					address	=	( ((uint32_t)(msgBuffer[1]) << 24 ) | ((uint32_t)(msgBuffer[2]) << 16 ) | ((uint32_t)(msgBuffer[3]) << 8 )|(msgBuffer[4]) ) << 1; // convert word to byte address
+                address	=	( ((uint32_t)(msgBuffer[1]) << 24 ) | ((uint32_t)(msgBuffer[2]) << 16 ) | ((uint32_t)(msgBuffer[3]) << 8 )|(msgBuffer[4]) ) << 1; // convert word to byte address
 #else
-					address	=	( ((msgBuffer[3]) << 8 ) | (msgBuffer[4]) ) << 1;		// convert word to byte address
+                address	=	( ((msgBuffer[3]) << 8 ) | (msgBuffer[4]) ) << 1;		// convert word to byte address
 #endif
-					msgLength			=	2;
-					msgBuffer[1]	=	STATUS_CMD_OK;
-					break;
-
-				case CMD_PROGRAM_FLASH_ISP:
-					{
-						uint16_t size	=	((msgBuffer[1]) << 8) | msgBuffer[2];
-						programDevice(&address, &eraseAddress, size, msgBuffer + 10);
-						msgLength			=	2;
-						msgBuffer[1]	=	STATUS_CMD_OK;
-					}
-					break;
-
-				case CMD_READ_FLASH_ISP:
-					{
-						uint16_t	size	=	((msgBuffer[1])<<8) | msgBuffer[2];
-						uint8_t	*p			=	msgBuffer + 1;
-						msgLength				=	size + 3;
-						readDevice(&address, size, p);
-						*p++	=	STATUS_CMD_OK;
-					}
-					break;
+                msgLength		= 2;
+                msgBuffer[1]	= STATUS_CMD_OK;
+            }
+            else if(msgBuffer[0] == CMD_PROGRAM_FLASH_ISP) {
+                uint16_t size	= ((msgBuffer[1]) << 8) | msgBuffer[2];
+                programDevice(&address, &eraseAddress, size, msgBuffer + 10);
+                msgLength		= 2;
+                msgBuffer[1]	= STATUS_CMD_OK;
+            }
+            else if(msgBuffer[0] == CMD_READ_FLASH_ISP) {
+                uint16_t size	= ((msgBuffer[1])<<8) | msgBuffer[2];
+                uint8_t	*p		= msgBuffer + 1;
+                msgLength		= size + 3;
+                readDevice(&address, size, p);
+                *p++	=	STATUS_CMD_OK;
+            }
 
 #ifdef SPI_MULTI_SUPPORT
-				case CMD_SPI_MULTI:
-					{
-						uint8_t answerByte;
-						uint8_t flag=0;
+            else if(msgBuffer[0] == CMD_SPI_MULTI) {
+                uint8_t answerByte;
+                uint8_t flag=0;
 
-						if ( msgBuffer[4]== 0x30 ) {
-							uint8_t signatureIndex	=	msgBuffer[6];
+                if ( msgBuffer[4]== 0x30 ) {
+                    uint8_t signatureIndex	=	msgBuffer[6];
 
-							if ( signatureIndex == 0 ) {
-								answerByte	=	(SIGNATURE_BYTES >> 16) & 0x000000FF;
-							}
-							else if ( signatureIndex == 1 ) {
-								answerByte	=	(SIGNATURE_BYTES >> 8) & 0x000000FF;
-							}
-							else {
-								answerByte	=	SIGNATURE_BYTES & 0x000000FF;
-							}
-						}
-						else if ( msgBuffer[4] & 0x50 ) {
-							if (msgBuffer[4] == 0x50) {
-								answerByte	=	boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
-							}
-							else if (msgBuffer[4] == 0x58) {
-								answerByte	=	boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
-							}
-							else {
-								answerByte	=	0;
-							}
-						}
-						else {
-							answerByte	=	0; // for all others command are not implemented, return dummy value for AVRDUDE happy <Worapoht>
-						}
-						if ( !flag ) {
-							msgLength			=	7;
-							msgBuffer[1]	=	STATUS_CMD_OK;
-							msgBuffer[2]	=	0;
-							msgBuffer[3]	=	msgBuffer[4];
-							msgBuffer[4]	=	0;
-							msgBuffer[5]	=	answerByte;
-							msgBuffer[6]	=	STATUS_CMD_OK;
-						}
-					}
-					break;
+                    if ( signatureIndex == 0 ) {
+                        answerByte	=	(SIGNATURE_BYTES >> 16) & 0x000000FF;
+                    }
+                    else if ( signatureIndex == 1 ) {
+                        answerByte	=	(SIGNATURE_BYTES >> 8) & 0x000000FF;
+                    }
+                    else {
+                        answerByte	=	SIGNATURE_BYTES & 0x000000FF;
+                    }
+                }
+                else if ( msgBuffer[4] & 0x50 ) {
+                    if (msgBuffer[4] == 0x50) {
+                        answerByte	=	boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
+                    }
+                    else if (msgBuffer[4] == 0x58) {
+                        answerByte	=	boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
+                    }
+                    else {
+                        answerByte	=	0;
+                    }
+                }
+                else {
+                    answerByte	=	0; // for all others command are not implemented, return dummy value for AVRDUDE happy <Worapoht>
+                }
+                if ( !flag ) {
+                    msgLength			=	7;
+                    msgBuffer[1]	=	STATUS_CMD_OK;
+                    msgBuffer[2]	=	0;
+                    msgBuffer[3]	=	msgBuffer[4];
+                    msgBuffer[4]	=	0;
+                    msgBuffer[5]	=	answerByte;
+                    msgBuffer[6]	=	STATUS_CMD_OK;
+                }
+            }
 #endif
-				case CMD_CHIP_ERASE_ISP:
-					eraseAddress		=	0;
-                    // Fallthrough
-				default:
-					msgLength			=	2;
-					msgBuffer[1]	=	STATUS_CMD_FAILED;
-					break;
-			}
+
+            else if(msgBuffer[0] == CMD_CHIP_ERASE_ISP) {
+                eraseAddress	= 0;
+                msgLength		= 2;
+                msgBuffer[1]	= STATUS_CMD_FAILED;
+            }
+            else {
+                msgLength		= 2;
+                msgBuffer[1]	= STATUS_CMD_FAILED;
+            }
 
 			// Now send answer message back
 			transmitChar(MESSAGE_START);
