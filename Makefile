@@ -190,11 +190,10 @@ ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 
 ############################################################
 #	Feb 02, 2020	<MGB> Adding 328PB Support	
-// -U lfuse:w:0xFF:m -u hfuse:w:0xD0:m -U efuse:0xF5:m
+# -U lfuse:w:0xFF:m -u hfuse:w:0xD0:m -U efuse:0xF5:m
 mega328pb: MCU = atmega328pb
 mega328pb: F_CPU = 16000000
 mega328pb: BOOTLOADER_ADDRESS = 7800
-mega328pb: CFLAGS += -D_MEGA_BOARD_
 mega328pb: begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega328pb.hex
 
@@ -203,7 +202,6 @@ mega328pb: begin gccversion sizebefore build sizeafter end
 mega1280: MCU = atmega1280
 mega1280: F_CPU = 16000000
 mega1280: BOOTLOADER_ADDRESS = 1F800
-mega1280: CFLAGS += -D_MEGA_BOARD_
 mega1280: begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega1280.hex
 
@@ -213,7 +211,6 @@ mega1280: begin gccversion sizebefore build sizeafter end
 mega1284p: MCU = atmega1284p
 mega1284p: F_CPU = 16000000
 mega1284p: BOOTLOADER_ADDRESS = 1F800
-mega1284p: CFLAGS += -D_MEGA_BOARD_
 mega1284p: begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega1284p.hex
 
@@ -226,7 +223,6 @@ mega1284p: begin gccversion sizebefore build sizeafter end
 mega2560:	MCU = atmega2560
 mega2560:	F_CPU = 16000000
 mega2560:	BOOTLOADER_ADDRESS = 3F800
-mega2560:	CFLAGS += -D_MEGA_BOARD_
 mega2560:	begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega2560.hex
 
