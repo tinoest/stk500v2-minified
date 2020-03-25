@@ -2,7 +2,7 @@
 
 Title:     STK500v2 compatible bootloader
            Heavily based on the work by Peter Fleury
-					 
+
 Compiler:  avr-gcc 4.8.1 / avr-libc 1.4.3
 Hardware:  Atmega2560/Atmega1284p
 License:   BSD-3-Clause
@@ -27,7 +27,11 @@ NOTES:
 #include	<avr/pgmspace.h>
 #include	"command.h"
 
-//#define SPI_MULTI_SUPPORT 1
+//#define REMOVE_SPI_MULTI_SUPPORT                              // disable spi multi support
+//#define REMOVE_PROGRAM_LOCK_BIT_SUPPORT                       // disable program lock bits
+//#define REMOVE_READ_FUSE_BIT_SUPPORT													// disable reading lock and fuse bits
+//#define REMOVE_WATCHDOG_SUPPORT																// disable the clearing of the wdt bits
+
 
 #ifndef EEWE
 	#define EEWE    1
@@ -107,7 +111,7 @@ NOTES:
 	#define	UART_RECEIVE_COMPLETE		RXC0
 	#define	UART_DATA_REG						UDR0
 	#define	UART_DOUBLE_SPEED				U2X0
-#elif defined(__AVR_ATmega328PB__) 
+#elif defined(__AVR_ATmega328PB__)
 	#define	UART_BAUD_RATE_LOW			UBRR0L
 	#define	UART_STATUS_REG					UCSR0A
 	#define	UART_CONTROL_REG				UCSR0B
@@ -169,6 +173,14 @@ void __jumpMain(void)
 
 }
 
+static void readDevice(uint32_t* programAddress, uint16_t msgSize, uint8_t* p);
+static void programDevice(uint32_t* programAddress, uint32_t* eraseAddress, uint16_t msgSize, uint8_t* buffer);
+static int16_t serialAvailable(void);
+static uint8_t recieveChar(void);
+static void transmitChar(int8_t c);
+uint8_t getParameter(uint8_t cmd);
+void recieveData(uint8_t* seqNum, uint8_t* msgBuffer);
+void appStart(void);
 
 static void readDevice(uint32_t* programAddress, uint16_t msgSize, uint8_t* p)
 {
@@ -245,9 +257,9 @@ static uint8_t recieveChar(void)
  */
 static void transmitChar(int8_t c)
 {
-	
+
 	UART_DATA_REG	=	c;
-	
+
 	while (!(UART_STATUS_REG & (1 << UART_TRANSMIT_COMPLETE)))
 		;
 
@@ -368,14 +380,16 @@ int main(void)
 
 	uint8_t *p;
 	uint8_t	msgBuffer[285];
-    uint8_t	seqNum				= 0;
-	uint8_t ispProgram			= 0;
+  uint8_t	seqNum				= 0;
+	uint8_t ispProgram		= 0;
 	uint8_t	checksum			= 0;
-	uint16_t msgLength			= 0;
+	uint16_t msgLength		= 0;
 	uint32_t address			= 0;
-	uint32_t eraseAddress		= 0;
-	uint32_t bootTimer			= 0;
-	uint8_t resetSource			= MCUSR;
+	uint32_t eraseAddress	= 0;
+	uint32_t bootTimer		= 0;
+	uint8_t resetSource		= MCUSR;
+
+#ifndef REMOVE_WATCHDOG_SUPPORT
 
 	__asm__ __volatile__ ("cli");
 	__asm__ __volatile__ ("wdr");
@@ -386,6 +400,12 @@ int main(void)
 
 	// move the resetSource to variable r2 so we can access it in the application if we want to
 	__asm__ __volatile__ ("mov r2, %0\n" :: "r" (resetSource));
+
+#else
+
+	MCUSR		=	0;
+
+#endif
 
 	// check if WDT generated the reset, if so, go straight to app
 	if ( resetSource & ( 1 << WDRF ) ) {
@@ -414,6 +434,7 @@ int main(void)
 		while ( !ispProgram ) {
 			recieveData(&seqNum, msgBuffer);	// Retrieve all the data
 
+<<<<<<< HEAD
             // Now process the STK500 commands, see Atmel Appnote AVR068
             if(msgBuffer[0] == CMD_SIGN_ON) {
                 msgLength		= 11;
@@ -456,12 +477,15 @@ int main(void)
                 }
                 msgBuffer[3]	=	STATUS_CMD_OK;
             }
+#ifndef REMOVE_PROGRAM_LOCK_BIT_SUPPORT
             else if(msgBuffer[0] == CMD_READ_LOCK_ISP) {
                 msgLength		= 4;
                 msgBuffer[1]	= STATUS_CMD_OK;
                 msgBuffer[2]	= boot_lock_fuse_bits_get( GET_LOCK_BITS );
                 msgBuffer[3]	= STATUS_CMD_OK;
             }
+#endif
+#ifndef REMOVE_READ_FUSE_BIT_SUPPORT
             else if(msgBuffer[0] == CMD_READ_FUSE_ISP) {
                 uint8_t fuseBits;
                 if ( msgBuffer[2] == 0x50 ) {
@@ -480,6 +504,7 @@ int main(void)
                 msgBuffer[2]	=	fuseBits;
                 msgBuffer[3]	=	STATUS_CMD_OK;
             }
+#endif
             else if(msgBuffer[0] == CMD_LOAD_ADDRESS) {
 #if defined(RAMPZ)
                 address	=	( ((uint32_t)(msgBuffer[1]) << 24 ) | ((uint32_t)(msgBuffer[2]) << 16 ) | ((uint32_t)(msgBuffer[3]) << 8 )|(msgBuffer[4]) ) << 1; // convert word to byte address
@@ -502,8 +527,7 @@ int main(void)
                 readDevice(&address, size, p);
                 *p++	=	STATUS_CMD_OK;
             }
-
-#ifdef SPI_MULTI_SUPPORT
+#ifndef SPI_MULTI_SUPPORT
             else if(msgBuffer[0] == CMD_SPI_MULTI) {
                 uint8_t answerByte;
                 uint8_t flag=0;
@@ -545,8 +569,6 @@ int main(void)
                     msgBuffer[6]	=	STATUS_CMD_OK;
                 }
             }
-#endif
-
             else if(msgBuffer[0] == CMD_CHIP_ERASE_ISP) {
                 eraseAddress	= 0;
                 msgLength		= 2;
