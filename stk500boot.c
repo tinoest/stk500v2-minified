@@ -433,8 +433,6 @@ int main(void)
 		//	main loop
 		while ( !ispProgram ) {
 			recieveData(&seqNum, msgBuffer);	// Retrieve all the data
-
-<<<<<<< HEAD
             // Now process the STK500 commands, see Atmel Appnote AVR068
             if(msgBuffer[0] == CMD_SIGN_ON) {
                 msgLength		= 11;
@@ -569,6 +567,7 @@ int main(void)
                     msgBuffer[6]	=	STATUS_CMD_OK;
                 }
             }
+#endif
             else if(msgBuffer[0] == CMD_CHIP_ERASE_ISP) {
                 eraseAddress	= 0;
                 msgLength		= 2;
