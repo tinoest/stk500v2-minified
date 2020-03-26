@@ -27,11 +27,11 @@ NOTES:
 #include	<avr/pgmspace.h>
 #include	"command.h"
 
-//#define REMOVE_SPI_MULTI_SUPPORT                              // disable spi multi support
+#define REMOVE_SPI_MULTI_SUPPORT                              // disable spi multi support
 //#define REMOVE_PROGRAM_LOCK_BIT_SUPPORT                       // disable program lock bits
 //#define REMOVE_READ_FUSE_BIT_SUPPORT													// disable reading lock and fuse bits
 //#define REMOVE_WATCHDOG_SUPPORT																// disable the clearing of the wdt bits
-
+//#define REMOVE_READ_SIGNATURE_SUPPORT													// disable the read signature support
 
 #ifndef EEWE
 	#define EEWE    1
@@ -51,17 +51,16 @@ NOTES:
  * UART Baudrate, AVRStudio AVRISP only accepts 115200 bps
  */
 #ifndef BAUDRATE
-	#define BAUDRATE 115200
+	#define BAUDRATE 115200U
 #endif
 
-#define BOOT_TIMEOUT 500000   // should be about 1 second
-//#define BOOT_TIMEOUT 3500000 // 7 seconds , approx 2us per step when optimize "s"
+#define BOOT_TIMEOUT 500000U   // should be about 1 second
 
 /*
  *  Enable (1) or disable (0) USART double speed operation
  */
 #ifndef UART_BAUDRATE_DOUBLE_SPEED
-	#define UART_BAUDRATE_DOUBLE_SPEED 1
+	#define UART_BAUDRATE_DOUBLE_SPEED 1U
 #endif
 
 /*
@@ -81,9 +80,9 @@ NOTES:
  * BOOTLOADER_ADDRESS (ATMega1284p)	= 128 * 1024 = 131072, 2Kb bootloader, 131072 - 2048 = 129024 ( 0x1F800 )
  */
 
-#define BOOTSIZE 2048
+#define BOOTSIZE 2048U
 
-#define APP_END  ( FLASHEND - ( 2 * BOOTSIZE ) + 1 )
+#define APP_END  ( FLASHEND - ( 2U * BOOTSIZE ) + 1U )
 
 /*
  * Signature bytes are not available in avr-gcc io_xxx.h
@@ -152,6 +151,7 @@ NOTES:
  * since this bootloader is not linked against the avr-gcc crt1 functions,
  * to reduce the code size, we need to provide our own initialization
  */
+
 void __jumpMain	(void) __attribute__ ((naked)) __attribute__ ((section (".init9")));
 #include <avr/sfr_defs.h>
 
@@ -177,7 +177,7 @@ static void readDevice(uint32_t* programAddress, uint16_t msgSize, uint8_t* p);
 static void programDevice(uint32_t* programAddress, uint32_t* eraseAddress, uint16_t msgSize, uint8_t* buffer);
 static int8_t serialAvailable(void);
 static uint8_t recieveChar(void);
-static void transmitChar(int8_t c);
+static __attribute__((noinline)) void transmitChar(int8_t c);
 static uint8_t getParameter(uint8_t cmd);
 static void recieveData(uint8_t* seqNum, uint8_t* msgBuffer);
 void appStart(void);
@@ -255,7 +255,7 @@ static uint8_t recieveChar(void)
 /*
  * transmit single byte to USART, wait until transmission is completed
  */
-static void transmitChar(int8_t c)
+static __attribute__((noinline)) void transmitChar(int8_t c)
 {
 
 	UART_DATA_REG	=	c;
@@ -456,8 +456,8 @@ int main(void)
 			}
 			else if(msgBuffer[0] == CMD_GET_PARAMETER) {
 					uint8_t value;
-					value 			= getParameter(msgBuffer[1]);
-					msgLength		= 3;
+					value					= getParameter(msgBuffer[1]);
+					msgLength			= 3;
 					msgBuffer[1]	= STATUS_CMD_OK;
 					msgBuffer[2]	= value;
 			}
@@ -465,9 +465,32 @@ int main(void)
 					if(msgBuffer[0] == CMD_LEAVE_PROGMODE_ISP) {
 							ispProgram	= 1;
 					}
+					msgLength			= 2;
+					msgBuffer[1]	= STATUS_CMD_OK;
+			}
+			else if(msgBuffer[0] == CMD_LOAD_ADDRESS) {
+#if defined(RAMPZ)
+					address	=	( ((uint32_t)(msgBuffer[1]) << 24 ) | ((uint32_t)(msgBuffer[2]) << 16 ) | ((uint32_t)(msgBuffer[3]) << 8 )|(msgBuffer[4]) ) << 1; // convert word to byte address
+#else
+					address	=	( ((msgBuffer[3]) << 8 ) | (msgBuffer[4]) ) << 1;		// convert word to byte address
+#endif
 					msgLength		= 2;
 					msgBuffer[1]	= STATUS_CMD_OK;
 			}
+			else if(msgBuffer[0] == CMD_PROGRAM_FLASH_ISP) {
+					uint16_t size	= ((msgBuffer[1]) << 8) | msgBuffer[2];
+					programDevice(&address, &eraseAddress, size, msgBuffer + 10);
+					msgLength		= 2;
+					msgBuffer[1]	= STATUS_CMD_OK;
+			}
+			else if(msgBuffer[0] == CMD_READ_FLASH_ISP) {
+				uint16_t size	= ((msgBuffer[1])<<8) | msgBuffer[2];
+				uint8_t	*p		= msgBuffer + 1;
+				msgLength		= size + 3;
+				readDevice(&address, size, p);
+			}
+
+#ifndef REMOVE_READ_SIGNATURE_SUPPORT
 			else if(msgBuffer[0] == CMD_READ_SIGNATURE_ISP) {
 					msgLength		= 4;
 					msgBuffer[1]	= STATUS_CMD_OK;
@@ -482,6 +505,8 @@ int main(void)
 					}
 					msgBuffer[3]	=	STATUS_CMD_OK;
 			}
+#endif
+
 #ifndef REMOVE_PROGRAM_LOCK_BIT_SUPPORT
 			else if(msgBuffer[0] == CMD_READ_LOCK_ISP) {
 					msgLength		= 4;
@@ -490,6 +515,7 @@ int main(void)
 					msgBuffer[3]	= STATUS_CMD_OK;
 			}
 #endif
+
 #ifndef REMOVE_READ_FUSE_BIT_SUPPORT
 			else if(msgBuffer[0] == CMD_READ_FUSE_ISP) {
 					uint8_t fuseBits;
@@ -510,29 +536,8 @@ int main(void)
 					msgBuffer[3]	=	STATUS_CMD_OK;
 			}
 #endif
-			else if(msgBuffer[0] == CMD_LOAD_ADDRESS) {
-#if defined(RAMPZ)
-					address	=	( ((uint32_t)(msgBuffer[1]) << 24 ) | ((uint32_t)(msgBuffer[2]) << 16 ) | ((uint32_t)(msgBuffer[3]) << 8 )|(msgBuffer[4]) ) << 1; // convert word to byte address
-#else
-					address	=	( ((msgBuffer[3]) << 8 ) | (msgBuffer[4]) ) << 1;		// convert word to byte address
-#endif
-					msgLength		= 2;
-					msgBuffer[1]	= STATUS_CMD_OK;
-			}
-			else if(msgBuffer[0] == CMD_PROGRAM_FLASH_ISP) {
-					uint16_t size	= ((msgBuffer[1]) << 8) | msgBuffer[2];
-					programDevice(&address, &eraseAddress, size, msgBuffer + 10);
-					msgLength		= 2;
-					msgBuffer[1]	= STATUS_CMD_OK;
-			}
-			else if(msgBuffer[0] == CMD_READ_FLASH_ISP) {
-					uint16_t size	= ((msgBuffer[1])<<8) | msgBuffer[2];
-					uint8_t	*p		= msgBuffer + 1;
-					msgLength		= size + 3;
-					readDevice(&address, size, p);
-					*p++	=	STATUS_CMD_OK;
-			}
-#ifndef SPI_MULTI_SUPPORT
+
+#ifndef REMOVE_SPI_MULTI_SUPPORT
 			else if(msgBuffer[0] == CMD_SPI_MULTI) {
 					uint8_t answerByte;
 					uint8_t flag=0;
@@ -575,14 +580,13 @@ int main(void)
 					}
 			}
 #endif
-			else if(msgBuffer[0] == CMD_CHIP_ERASE_ISP) {
-					eraseAddress	= 0;
-					msgLength		= 2;
-					msgBuffer[1]	= STATUS_CMD_FAILED;
-			}
+
 			else {
-					msgLength		= 2;
-					msgBuffer[1]	= STATUS_CMD_FAILED;
+				if(msgBuffer[0] == CMD_CHIP_ERASE_ISP) {
+					eraseAddress	= 0;
+				}
+				msgLength			= 2;
+				msgBuffer[1]	= STATUS_CMD_FAILED;
 			}
 
 			// Now send answer message back
