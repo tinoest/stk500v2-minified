@@ -78,9 +78,19 @@ NOTES:
  * BOOTLOADER_ADDRESS (ATMega2560)	= 256 * 1024 = 262144, 2Kb bootloader, 262144 - 2048 = 260096 ( 0x3F800 )
  * BOOTLOADER_ADDRESS (ATMega1280)	= 256 * 1024 = 262144, 2Kb bootloader, 131072 - 2048 = 129024 ( 0x1F800 )
  * BOOTLOADER_ADDRESS (ATMega1284p)	= 128 * 1024 = 131072, 2Kb bootloader, 131072 - 2048 = 129024 ( 0x1F800 )
+ * BOOTLOADER_ADDRESS (ATMega328pb)	= 32  * 1024 = 32768,  2Kb bootloader, 32768  - 2048 = 30720  ( 0x7800 )
+
+ * BOOTLOADER_ADDRESS (ATMega2560)	= 256 * 1024 = 262144, 1Kb bootloader, 262144 - 1024 = 261120 ( 0x3FC00 )
+ * BOOTLOADER_ADDRESS (ATMega1280)	= 256 * 1024 = 262144, 1Kb bootloader, 131072 - 1024 = 130048 ( 0x1FC00 )
+ * BOOTLOADER_ADDRESS (ATMega1284p)	= 128 * 1024 = 131072, 1Kb bootloader, 131072 - 1024 = 130048 ( 0x1FC00 )
+ * BOOTLOADER_ADDRESS (ATMega328pb)	= 32  * 1024 = 32768,  1Kb bootloader, 32768  - 1024 = 31744  ( 0x7C00 ) 
  */
 
+#ifndef REMOVE_SPI_MULTI_SUPPORT
 #define BOOTSIZE 2048U
+#else
+#define BOOTSIZE 1024U
+#endif
 
 #define APP_END  ( FLASHEND - ( 2U * BOOTSIZE ) + 1U )
 
@@ -152,10 +162,11 @@ NOTES:
  * to reduce the code size, we need to provide our own initialization
  */
 
+#ifndef REMOVE_SPI_MULTI_SUPPORT
+
 void __jumpMain	(void) __attribute__ ((naked)) __attribute__ ((section (".init9")));
 #include <avr/sfr_defs.h>
 
-//*****************************************************************************
 void __jumpMain(void)
 {
 	asm volatile ( ".set __stack, %0" :: "i" (RAMEND) );
@@ -172,6 +183,12 @@ void __jumpMain(void)
 	asm volatile ( "jmp main");												// jump to main()
 
 }
+
+#else
+
+int main(void) __attribute__ ((OS_main)) __attribute__ ((section (".init9"))) __attribute__((used));
+
+#endif
 
 static void readDevice(uint32_t* programAddress, uint16_t msgSize, uint8_t* p);
 static void programDevice(uint32_t* programAddress, uint32_t* eraseAddress, uint16_t msgSize, uint8_t* buffer);
@@ -396,6 +413,8 @@ int main(void)
 	uint32_t bootTimer		= 0;
 	uint8_t resetSource		= MCUSR;
 
+	asm volatile ("clr __zero_reg__");
+
 #ifndef REMOVE_WATCHDOG_SUPPORT
 
 	__asm__ __volatile__ ("cli");
@@ -470,7 +489,8 @@ int main(void)
 			}
 			else if(msgBuffer[0] == CMD_LOAD_ADDRESS) {
 #if defined(RAMPZ)
-					address	=	( ((uint32_t)(msgBuffer[1]) << 24 ) | ((uint32_t)(msgBuffer[2]) << 16 ) | ((uint32_t)(msgBuffer[3]) << 8 )|(msgBuffer[4]) ) << 1; // convert word to byte address
+					address	=	((uint32_t)(msgBuffer[1]) << 24 );
+					address |= ( ((uint32_t)(msgBuffer[2]) << 16 ) | ((uint32_t)(msgBuffer[3]) << 8 )|(msgBuffer[4]) ) << 1; // convert word to byte address
 #else
 					address	=	( ((msgBuffer[3]) << 8 ) | (msgBuffer[4]) ) << 1;		// convert word to byte address
 #endif

@@ -139,9 +139,9 @@ LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
 #--------------- bootloader linker Options -------
 # BOOTLOADER_ADDRESS (=Start of Boot Loader section
 # in bytes - not words) is defined above.
-#LDFLAGS += -Wl,--section-start=.text=$(BOOTLOADER_ADDRESS) -nostartfiles -nodefaultlibs
+LDFLAGS += -Wl,--section-start=.text=$(BOOTLOADER_ADDRESS) -nostartfiles -nodefaultlibs
 #LDFLAGS += -Wl,--section-start=.text=$(BOOTLOADER_ADDRESS) -nostartfiles
-LDFLAGS += -Wl,--section-start=.text=$(BOOTLOADER_ADDRESS)
+#LDFLAGS += -Wl,--section-start=.text=$(BOOTLOADER_ADDRESS)
 
 #============================================================================
 
@@ -191,10 +191,11 @@ ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 
 ############################################################
 #	Feb 02, 2020	<MGB> Adding 328PB Support	
-# -U lfuse:w:0xFF:m -u hfuse:w:0xD0:m -U efuse:0xF5:m
+# -U lfuse:w:0xFF:m -u hfuse:w:0xD0:m -U efuse:0xF5:m 7800 2048U
+# -U lfuse:w:0xFF:m -u hfuse:w:0xD2:m -U efuse:0xF5:m 7C00 1024U
 mega328pb: MCU = atmega328pb
 mega328pb: F_CPU = 16000000
-mega328pb: BOOTLOADER_ADDRESS = 7800
+mega328pb: BOOTLOADER_ADDRESS = 7C00 #7800
 mega328pb: begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega328pb.hex
 
@@ -208,10 +209,11 @@ mega1280: begin gccversion sizebefore build sizeafter end
 
 ############################################################
 #	Sept 21, 2018	<MGB> Adding 1284P Support	
-# -U lfuse:w:0xF7:m -U hfuse:w:0xD2:m -U efuse:w:0xFD:m
+# -U lfuse:w:0xF7:m -U hfuse:w:0xD2:m -U efuse:w:0xFD:m 1F800 2048U
+# -U lfuse:w:0xF7:m -U hfuse:w:0xD4:m -U efuse:w:0xFD:m 1FC00 1024U
 mega1284p: MCU = atmega1284p
 mega1284p: F_CPU = 16000000
-mega1284p: BOOTLOADER_ADDRESS = 1F800
+mega1284p: BOOTLOADER_ADDRESS = 1FC00 #1F800
 mega1284p: begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega1284p.hex
 
