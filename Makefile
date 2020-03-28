@@ -68,7 +68,7 @@ EXTRAINCDIRS =
 CSTANDARD = -std=gnu99
 
 # Place -D or -U options here
-CDEFS = -DF_CPU=$(F_CPU)UL
+CDEFS = -DF_CPU=$(F_CPU)UL $(MICRO_DEFS)
 
 # Place -I options here
 CINCS =
@@ -191,13 +191,23 @@ ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 
 ############################################################
 #	Feb 02, 2020	<MGB> Adding 328PB Support	
-# -U lfuse:w:0xFF:m -u hfuse:w:0xD0:m -U efuse:0xF5:m 7800 2048U
 # -U lfuse:w:0xFF:m -u hfuse:w:0xD2:m -U efuse:0xF5:m 7C00 1024U
 mega328pb: MCU = atmega328pb
 mega328pb: F_CPU = 16000000
 mega328pb: BOOTLOADER_ADDRESS = 7C00 #7800
+mega328pb: MICRO_DEFS = -DREMOVE_SPI_MULTI_SUPPORT
 mega328pb: begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega328pb.hex
+
+############################################################
+#	Feb 02, 2020	<MGB> Adding 328PB Support	
+# -U lfuse:w:0xFF:m -u hfuse:w:0xD0:m -U efuse:0xF5:m 7800 2048U
+mega328pb-multi: MCU = atmega328pb
+mega328pb-multi: F_CPU = 16000000
+mega328pb-multi: BOOTLOADER_ADDRESS = 7800
+mega328pb-multi: begin gccversion sizebefore build sizeafter end
+			mv $(TARGET).hex stk500boot_v2_mega328pb-multi.hex
+
 
 ############################################################
 #	May 25,	2010	<MLS> Adding 1280 support
@@ -210,24 +220,47 @@ mega1280: begin gccversion sizebefore build sizeafter end
 ############################################################
 #	Sept 21, 2018	<MGB> Adding 1284P Support	
 # -U lfuse:w:0xF7:m -U hfuse:w:0xD2:m -U efuse:w:0xFD:m 1F800 2048U
+mega1284p-multi: MCU = atmega1284p
+mega1284p-multi: F_CPU = 16000000
+mega1284p-multi: BOOTLOADER_ADDRESS = 1F800
+mega1284p-multi: begin gccversion sizebefore build sizeafter end
+			mv $(TARGET).hex stk500boot_v2_mega1284p-multi.hex
+
+############################################################
+#	Sept 21, 2018	<MGB> Adding 1284P Support	
 # -U lfuse:w:0xF7:m -U hfuse:w:0xD4:m -U efuse:w:0xFD:m 1FC00 1024U
 mega1284p: MCU = atmega1284p
 mega1284p: F_CPU = 16000000
 mega1284p: BOOTLOADER_ADDRESS = 1FC00 #1F800
+mega1284p: MICRO_DEFS = -DREMOVE_SPI_MULTI_SUPPORT
 mega1284p: begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega1284p.hex
 
 
 ############################################################
 #	Jul 6,	2010	<MLS> Adding 2560 support
+# BOOTLOADER_ADDRESS 3FC00 = avrdude -cusbtiny -pm2560 -e -U lfuse:w:0xff:m -U hfuse:w:0xde:m -U efuse:w:0xfd:m
 # BOOTLOADER_ADDRESS 3F800 = avrdude -cusbtiny -pm2560 -e -U lfuse:w:0xff:m -U hfuse:w:0xdc:m -U efuse:w:0xfd:m
-# BOOTLOADER_ADDRESS 3F000 = avrdude -v -patmega2560 -cusbtiny -e  -U lock:w:0x3F:m -U lfuse:w:0xff:m -U hfuse:w:0xda:m -U efuse:w:0xfd:m
+# BOOTLOADER_ADDRESS 3F000 = avrdude -cusbtiny -pm2560 -e -U lfuse:w:0xff:m -U hfuse:w:0xda:m -U efuse:w:0xfd:m
 # avrdude -v -patmega2560 -cusbtiny -Uflash:w:stk500boot_v2_mega2560.hex:i -Ulock:w:0x0F:m 
 mega2560:	MCU = atmega2560
 mega2560:	F_CPU = 16000000
-mega2560:	BOOTLOADER_ADDRESS = 3F800
+mega2560:	BOOTLOADER_ADDRESS = 3FC00
+mega2560: MICRO_DEFS = -DREMOVE_SPI_MULTI_SUPPORT
 mega2560:	begin gccversion sizebefore build sizeafter end
 			mv $(TARGET).hex stk500boot_v2_mega2560.hex
+
+############################################################
+#	Jul 6,	2010	<MLS> Adding 2560 support
+# BOOTLOADER_ADDRESS 3F800 = avrdude -cusbtiny -pm2560 -e -U lfuse:w:0xff:m -U hfuse:w:0xdc:m -U efuse:w:0xfd:m
+# BOOTLOADER_ADDRESS 3F000 = avrdude -cusbtiny -pm2560 -e -U lfuse:w:0xff:m -U hfuse:w:0xda:m -U efuse:w:0xfd:m
+# avrdude -v -patmega2560 -cusbtiny -Uflash:w:stk500boot_v2_mega2560.hex:i -Ulock:w:0x0F:m 
+mega2560-multi:	MCU = atmega2560
+mega2560-multi:	F_CPU = 16000000
+mega2560-multi:	BOOTLOADER_ADDRESS = 3F800
+mega2560-multi:	begin gccversion sizebefore build sizeafter end
+			mv $(TARGET).hex stk500boot_v2_mega2560-multi.hex
+
 
 # Default target.
 all: begin gccversion sizebefore build sizeafter end

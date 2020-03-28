@@ -27,7 +27,7 @@ NOTES:
 #include	<avr/pgmspace.h>
 #include	"command.h"
 
-#define REMOVE_SPI_MULTI_SUPPORT                              // disable spi multi support
+//#define REMOVE_SPI_MULTI_SUPPORT                              // disable spi multi support
 //#define REMOVE_PROGRAM_LOCK_BIT_SUPPORT                       // disable program lock bits
 //#define REMOVE_READ_FUSE_BIT_SUPPORT													// disable reading lock and fuse bits
 //#define REMOVE_WATCHDOG_SUPPORT																// disable the clearing of the wdt bits
