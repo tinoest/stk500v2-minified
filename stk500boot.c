@@ -1,5 +1,4 @@
 /*
-
 Title:     STK500v2 compatible bootloader
            Heavily based on the work by Peter Fleury
 
@@ -656,3 +655,4 @@ int main(void)
 		;
 
 }
+// vim: noai:ts=2:sw=2
